@@ -1,0 +1,32 @@
+CSE 512 Project Phase 1
+Master: master
+Slaves: namrata,varun,venkat
+
+
+1) Bidirctional-Passwordless ssh to slaves - Done
+ssh namrata
+ssh varun
+ssh venkat 
+2) Running the HDFS - Done
+./runHadoop.sh
+3) Starting the Spak Cluster - Done
+./runSpark.sh
+4) Creating the dataSets folder on HDFS - Done
+
+5) Loading the csv files to HDFS --> Done
+./hadoop fs -put file:///home/hadoop/workspace/operation1/data/zcta510.csv file:///home/hadoop/workspace/operation1/dataSets
+./hadoop fs -put file:///home/hadoop/workspace/operation1/data/arealm.csv file:///home/hadoop/workspace/operation1/dataSets
+
+6) Loading the geospark to scala in cluster mode(--master)- Done
+./spark-shell --jars geospark.jar --master spark://master:7077
+7) Running queries
+   :load /home/hadoop/code
+- Answer 2a) = > 0
+         2b) = > 0
+         3a) = > POINT (-64.628402 17.783587), POINT (-80.555973 24.969359), POINT (-88.221102 32.35078), POINT (-88.331492 32.324142), POINT 			(-88.388954 32.357073) = > 5 Points
+         3b) = > POINT (-64.628402 17.783587), POINT (-64.764355 17.682359), POINT (-64.655374 17.765658), POINT (-64.642479 17.78126), POINT 			(-64.667084 17.764475) = > 5 points
+         4a) = > 33144
+         4b) = > 33144
+         4c) = > 33144
+Done---------------------------------------------------------------------------------------------------------
+

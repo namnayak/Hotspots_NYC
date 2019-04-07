@@ -1,0 +1,224 @@
+
+import org.datasyslab.geospark.spatialOperator.RangeQuery; 
+import org.datasyslab.geospark.spatialRDD.PointRDD;
+import com.vividsolutions.jts.geom.Envelope;
+import org.datasyslab.geospark.enums.FileDataSplitter;
+
+val path_zcta510 = "file:///home/hadoop/workspace/operation1/dataSets/zcta510.csv";
+val path_arealm = "file:///home/hadoop/workspace/operation1/dataSets/arealm.csv";
+
+//val queryEnvelope=new Envelope (-113.79,-109.73,32.99,35.08);
+val queryEnvelope=new Envelope (32.99,35.08,-113.79,-109.73);
+/* Range query window format: minX, maxX, minY, maxY*/
+val objectRDD = new PointRDD(sc, "/home/hadoop/workspace/operation1/dataSets/arealm.csv", 0, FileDataSplitter.CSV, false); 
+/* 
+ * 0 is the starting column of spatial data in the input file. 
+ * FileDataSplitter.CSV means the data format is CSV. We CSV, TSV, WKT, GeoJSON and self-defined format mapper.
+ * false means each spatial object doesn't need to carry the original input tuple with it.
+ */
+val resultSize = RangeQuery.SpatialRangeQuery(objectRDD, queryEnvelope, 0,false).count();
+/* 
+ * The O means consider a point only if it is fully covered by the query window when doing query.
+ * The false means don't use spatial index.
+ */
+/*---------------------------- End an example Spatial Range Query without Index ----------------------------*/
+
+
+/*---------------------------- Start an example Spatial Range Query with Index ----------------------------*/
+import org.datasyslab.geospark.spatialOperator.RangeQuery; 
+import org.datasyslab.geospark.spatialRDD.PointRDD;
+import com.vividsolutions.jts.geom.Envelope;
+import org.datasyslab.geospark.enums.FileDataSplitter;
+import org.datasyslab.geospark.enums.IndexType;
+
+//val queryEnvelope=new Envelope (-113.79,-109.73,32.99,35.08);
+val queryEnvelope=new Envelope (32.99,35.08,-113.79,-109.73);
+/* Range query window format: minX, maxX, minY, maxY*/
+val objectRDD = new PointRDD(sc, path_arealm, 0, FileDataSplitter.CSV, false); 
+/* 
+ * 0 is the starting column of spatial data in the input file. 
+ * FileDataSplitter.CSV enum means the data format is CSV. We CSV, TSV, WKT, GeoJSON and self-defined format mapper.
+ * false means each spatial object doesn't need to carry the original input tuple with it.
+ */
+objectRDD.buildIndex(IndexType.RTREE,false);
+/* 
+ * IndexType.RTREE enum means the index type is R-tree. We support R-Tree index and Quad-Tree index.
+ * false means just build index on original spatial RDD instead of spatial partitioned RDD. ONLY set true when doing Spatial Join Query.
+ */
+val resultSize = RangeQuery.SpatialRangeQuery(objectRDD, queryEnvelope, 0,false).count();
+/* 
+ * The O means consider a point only if it is fully covered by the query window when doing query.
+ * The true means use spatial index which has been built before.
+ */
+/*---------------------------- End an example Spatial Range Query with Index ----------------------------*/
+
+
+/*---------------------------- Start an example Spatial KNN Query without Index ----------------------------*/
+import org.datasyslab.geospark.spatialOperator.KNNQuery;
+import org.datasyslab.geospark.spatialRDD.PointRDD;
+import com.vividsolutions.jts.geom.GeometryFactory;
+import com.vividsolutions.jts.geom.Point;
+import com.vividsolutions.jts.geom.Coordinate;
+import org.datasyslab.geospark.enums.FileDataSplitter;
+
+val fact=new GeometryFactory();
+val queryPoint=fact.createPoint(new Coordinate(35.08, -113.79));
+/* Range query window format: X Y */
+val objectRDD = new PointRDD(sc, path_arealm, 0, FileDataSplitter.CSV, false); 
+/* 
+ * 0 is the starting column of spatial data in the input file. 
+ * FileDataSplitter.CSV means the data format is CSV. We CSV, TSV, WKT, GeoJSON and self-defined format mapper.
+ * false means each spatial object doesn't need to carry the original input tuple with it.
+ */
+val resultSize = KNNQuery.SpatialKnnQuery(objectRDD, queryPoint, 5,false);
+/* The number 5 means 5 nearest neighbors
+ * The false means don't use spatial index.
+ */
+
+/*---------------------------- End an example Spatial KNN Query without Index ----------------------------*/
+
+
+/*---------------------------- Start an example Spatial KNN Query with Index ----------------------------*/
+import org.datasyslab.geospark.spatialOperator.KNNQuery;
+import org.datasyslab.geospark.spatialRDD.PointRDD;
+import com.vividsolutions.jts.geom.GeometryFactory;
+import com.vividsolutions.jts.geom.Point;
+import com.vividsolutions.jts.geom.Coordinate;
+import org.datasyslab.geospark.enums.FileDataSplitter;
+import org.datasyslab.geospark.enums.IndexType;
+
+val fact=new GeometryFactory();
+val queryPoint=fact.createPoint(new Coordinate(35.08, -113.79));
+/* Range query window format: X Y */
+val objectRDD = new PointRDD(sc, path_arealm, 0, FileDataSplitter.CSV, false); 
+/* 
+ * 0 is the starting column of spatial data in the input file. 
+ * FileDataSplitter.CSV means the data format is CSV. We CSV, TSV, WKT, GeoJSON and self-defined format mapper.
+ * false means each spatial object doesn't need to carry the original input tuple with it.
+ */
+objectRDD.buildIndex(IndexType.RTREE,false);
+/* 
+ * IndexType.RTREE enum means the index type is R-tree. We support R-Tree index and Quad-Tree index. But Quad-Tree doesn't support KNN.
+ * false means just build index on original spatial RDD instead of spatial partitioned RDD. ONLY set true when doing Spatial Join Query.
+ */
+val resultSize = KNNQuery.SpatialKnnQuery(objectRDD, queryPoint, 5,true);
+/* The number 5 means 5 nearest neighbors
+ * The true means use spatial index.
+ */
+/*---------------------------- End an example Spatial KNN Query with Index ----------------------------*/
+
+/*---------------------------- Start an example Spatial Join Query without Index ----------------------------*/
+import org.datasyslab.geospark.spatialOperator.JoinQuery;
+import org.datasyslab.geospark.spatialRDD.PointRDD;
+import org.datasyslab.geospark.spatialRDD.RectangleRDD;
+import org.datasyslab.geospark.enums.FileDataSplitter;
+import org.datasyslab.geospark.enums.GridType;
+
+val objectRDD = new PointRDD(sc, path_arealm, 0, FileDataSplitter.CSV, false); 
+/* 
+ * 0 is the starting column of spatial data in the input file. 
+ * FileDataSplitter.CSV means the data format is CSV. We CSV, TSV, WKT, GeoJSON and self-defined format mapper.
+ * false means each spatial object doesn't need to carry the original input tuple with it.
+ */
+val rectangleRDD = new RectangleRDD(sc, path_zcta510, 0, FileDataSplitter.CSV, false); 
+/* 
+ * 0 is the starting column of spatial data in the input file. 
+ * FileDataSplitter.CSV means the data format is CSV. We CSV, TSV, WKT, GeoJSON and self-defined format mapper.
+ * false means each spatial object doesn't need to carry the original input tuple with it.
+ */
+objectRDD.spatialPartitioning(GridType.EQUALGRID);
+/*
+ * GridType.RTREE means use R-Tree spatial partitioning technique. It will take the leaf node boundaries as parition boundary.
+ * We support R-Tree partitioning and Voronoi diagram partitioning.
+ */
+rectangleRDD.spatialPartitioning(objectRDD.grids);
+/* 
+ * Use the partition boundary of objectRDD to repartition the query window RDD, This is mandatory.
+ */
+val resultSize = JoinQuery.SpatialJoinQuery(objectRDD,rectangleRDD,false).count();
+/*
+ * false means don't use spatial index.
+ */
+/*---------------------------- End an example Spatial Join Query without Index ----------------------------*/
+
+
+/*---------------------------- Start an example Spatial Join Query with Index ----------------------------*/
+import org.datasyslab.geospark.spatialOperator.JoinQuery;
+import org.datasyslab.geospark.spatialRDD.PointRDD;
+import org.datasyslab.geospark.spatialRDD.RectangleRDD;
+import org.datasyslab.geospark.enums.FileDataSplitter;
+import org.datasyslab.geospark.enums.GridType;
+import org.datasyslab.geospark.enums.IndexType;
+
+val objectRDD = new PointRDD(sc, path_arealm, 0, FileDataSplitter.CSV, false); 
+/* 
+ * 0 is the starting column of spatial data in the input file. 
+ * FileDataSplitter.CSV means the data format is CSV. We CSV, TSV, WKT, GeoJSON and self-defined format mapper.
+ * false means each spatial object doesn't need to carry the original input tuple with it.
+ */
+val rectangleRDD = new RectangleRDD(sc, path_zcta510, 0, FileDataSplitter.CSV, false); 
+/* 
+ * 0 is the starting column of spatial data in the input file. 
+ * FileDataSplitter.CSV means the data format is CSV. We CSV, TSV, WKT, GeoJSON and self-defined format mapper.
+ * false means each spatial object doesn't need to carry the original input tuple with it.
+ */
+objectRDD.spatialPartitioning(GridType.EQUALGRID);
+/*
+ * GridType.RTREE means use R-Tree spatial partitioning technique. It will take the leaf node boundaries as parition boundary.
+ * We support R-Tree partitioning and Voronoi diagram partitioning.
+ */
+objectRDD.buildIndex(IndexType.RTREE,true);
+/* 
+ * IndexType.RTREE enum means the index type is R-tree. We support R-Tree index and Quad-Tree index. But Quad-Tree doesn't support KNN.
+ * True means build index on the spatial partitioned RDD. ONLY set true when doing Spatial Join Query.
+ */
+rectangleRDD.spatialPartitioning(objectRDD.grids);
+/* 
+ * Use the partition boundary of objectRDD to repartition the query window RDD, This is mandatory.
+ */
+val resultSize = JoinQuery.SpatialJoinQuery(objectRDD,rectangleRDD,true).count();
+/*
+ * true means use spatial index.
+ */
+/*---------------------------- End an example Spatial Join Query with Index ----------------------------*/
+
+
+
+
+
+
+
+
+/*---------------------------- Start an example Spatial Join Query without Index ----------------------------*/
+import org.datasyslab.geospark.spatialOperator.JoinQuery;
+import org.datasyslab.geospark.spatialRDD.PointRDD;
+import org.datasyslab.geospark.spatialRDD.RectangleRDD;
+import org.datasyslab.geospark.enums.FileDataSplitter;
+import org.datasyslab.geospark.enums.GridType;
+
+val objectRDD = new PointRDD(sc, path_arealm, 0, FileDataSplitter.CSV, false); 
+/* 
+ * 0 is the starting column of spatial data in the input file. 
+ * FileDataSplitter.CSV means the data format is CSV. We CSV, TSV, WKT, GeoJSON and self-defined format mapper.
+ * false means each spatial object doesn't need to carry the original input tuple with it.
+ */
+val rectangleRDD = new RectangleRDD(sc, path_zcta510, 0, FileDataSplitter.CSV, false); 
+/* 
+ * 0 is the starting column of spatial data in the input file. 
+ * FileDataSplitter.CSV means the data format is CSV. We CSV, TSV, WKT, GeoJSON and self-defined format mapper.
+ * false means each spatial object doesn't need to carry the original input tuple with it.
+ */
+objectRDD.spatialPartitioning(GridType.RTREE);
+/*
+ * GridType.RTREE means use R-Tree spatial partitioning technique. It will take the leaf node boundaries as parition boundary.
+ * We support R-Tree partitioning and Voronoi diagram partitioning.
+ */
+rectangleRDD.spatialPartitioning(objectRDD.grids);
+/* 
+ * Use the partition boundary of objectRDD to repartition the query window RDD, This is mandatory.
+ */
+val resultSize = JoinQuery.SpatialJoinQuery(objectRDD,rectangleRDD,false).count();
+/*
+ * false means don't use spatial index.
+ */
+/*---------------------------- End an example Spatial Join Query without Index ----------------------------*/
